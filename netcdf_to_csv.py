@@ -62,3 +62,19 @@ def netcdf2csv():
     df.drop(labels=['u10', 'v10', 'u100', 'v100'], axis=1, inplace = True)
 
     df.to_csv('data/table.csv', index = False)
+
+def load_netcdf(path):
+    years = range(1950,2021)
+    files = [path+'/dane_[50,20]_12m_'+str(year)+'.nc' for year in years]
+    df = pd.DataFrame()
+    for file in files:
+        df = df.append(netCDF2df(file),ignore_index=True)
+    
+    df['Date Time'] = pd.to_datetime(df.pop('Date Time'), infer_datetime_format=True)
+    df['tp'] = df['tp'].fillna(0)
+
+    df['windspeed_10'] = (df['u10']**2 + df['v10']**2)**(1/2)
+    df['windspeed_100'] = (df['u100']**2 + df['v100']**2)**(1/2)
+    df.drop(labels=['u10', 'v10', 'u100', 'v100'], axis=1, inplace = True)
+
+    return df

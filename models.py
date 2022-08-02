@@ -14,10 +14,9 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import LSTM
-from tensorflow.keras.layers import RepeatVector
-from tensorflow.keras.layers import TimeDistributed
 from tensorflow.keras.layers import Reshape
 from tensorflow import keras
+from netcdf_to_csv import *
 
 
 def datetimeToSignal(df):
@@ -49,7 +48,7 @@ def to_supervised(data, n_input, n_out=1):
         # ensure we have enough data for this instance
         if out_end < len(data):
             X.append(data[in_start:in_end, :])
-            y.append(data[out_end-1, 2]) # 5 indicates 'windspeed10' parameter
+            y.append(data[out_end-1, 5]) # 5 indicates 'windspeed10' parameter
         # move along one time step
         in_start += 1
     return array(X), array(y).reshape((len(y),1))
@@ -109,7 +108,7 @@ def evaluate(model, X_test, y_test, scaler_y, display = True, save_to = ''):
         end = start+length
         plt.figure(figsize=[10,5])
         plt.xlabel('TimePoint in hours')
-        plt.ylabel('$Mean sea level pressure[Pa]$')
+        plt.ylabel('$Windspeed_{10}[m/s]$')
         plt.grid()
         plt.plot(range(length), testYTrue[start:end],'k.')
         plt.plot(range(length),testPredictions[start:end],'r')
@@ -135,7 +134,8 @@ def cross_corr(model, X_test, y_test, scaler_y):
 
 
 if __name__ == "__main__":
-    df = read_csv('data/data_single_loc.csv')
+    # df = read_csv('data/data_single_loc.csv')
+    df = load_netcdf('data/ERA5_single_location')
     
     X_train, y_train, X_test, y_test, scaler_y = data_prep(df, n_hours=6)
 
