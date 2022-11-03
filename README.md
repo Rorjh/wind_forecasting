@@ -13,6 +13,10 @@ Stwórz środowisko wirtualne pythona:
 ```
 virtualvenv venv
 ```
+Aktywuj środowisko:
+```
+source venv/Scripts/activate
+```
 Zainstaluj potrzebne pakiety z pliku requirements.txt:
 ```
 pip install -r requirements.txt
