@@ -4,6 +4,7 @@ import netCDF4
 
 from netCDF4 import num2date
 from functions import *
+from configparser import ConfigParser
 
 def netCDF2df (filename):
     f = netCDF4.Dataset(filename)
@@ -64,8 +65,18 @@ def netcdf2csv():
     df.to_csv('data/table.csv', index = False)
 
 def load_netcdf(path):
-    years = range(1950,2021)
-    files = [path+'/dane_[50,20]_12m_'+str(year)+'.nc' for year in years]
+    
+    config = ConfigParser()
+    config.read('properties.cfg')
+    latitude = config.get('dataSection', 'latitude')
+    longitude = config.get('dataSection', 'longitude')
+    trainFrom = int(config.get('dataSection', 'train.from'))
+    trainTo = int(config.get('dataSection', 'train.to'))
+    testFrom = int(config.get('dataSection', 'test.from'))
+    testTo = int(config.get('dataSection', 'test.to'))
+    
+    years = list(range(trainFrom, trainTo+1)) + list(range(testFrom, testTo+1))
+    files = [path+'/data_[{},{}]_'.format(latitude, longitude)+str(year)+'.nc' for year in years]
     df = pd.DataFrame()
     for file in files:
         df = df.append(netCDF2df(file),ignore_index=True)

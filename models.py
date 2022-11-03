@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import random
+import random, os
 
 from math import sqrt
 from numpy import split
@@ -9,14 +9,14 @@ from numpy import array
 from pandas import read_csv
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
-from matplotlib import pyplot
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import LSTM
-from tensorflow.keras.layers import Reshape
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.layers import LSTM
+from keras.layers import Reshape
 from tensorflow import keras
-from netcdf_to_csv import *
+from data_load import load_netcdf
+from configparser import ConfigParser
 
 
 def datetimeToSignal(df):
@@ -53,12 +53,12 @@ def to_supervised(data, n_input, n_out=1):
         in_start += 1
     return array(X), array(y).reshape((len(y),1))
 
-def data_prep(df, n_hours):
+def data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, toFuture):
 
-    train = df[df['Date Time']>='1994-01-01']
-    train = train[train['Date Time']<'2002-01-01']
-    test = df[df['Date Time']>='2002-01-01']
-    test = test[test['Date Time']<'2003-01-01']
+    train = df[df['Date Time']>='{}-01-01'.format(trainFrom)]
+    train = train[train['Date Time']<'{}-01-01'.format(trainTo+1)]
+    test = df[df['Date Time']>='{}-01-01'.format(testFrom)]
+    test = test[test['Date Time']<'{}-01-01'.format(testTo+1)]
 
     train = datetimeToSignal(train)
     test = datetimeToSignal(test)
@@ -75,8 +75,8 @@ def data_prep(df, n_hours):
     values_train = scaler.transform(values_train)
     values_test = scaler.transform(values_test)
 
-    X_train, y_train = to_supervised(values_train, n_input=24, n_out=n_hours)
-    X_test, y_test = to_supervised(values_test, n_input=24, n_out=n_hours)
+    X_train, y_train = to_supervised(values_train, n_input=lookback, n_out=toFuture)
+    X_test, y_test = to_supervised(values_test, n_input=lookback, n_out=toFuture)
 
     return X_train, y_train, X_test, y_test, scaler_y
 
@@ -113,6 +113,7 @@ def evaluate(model, X_test, y_test, scaler_y, display = True, save_to = ''):
         plt.plot(range(length), testYTrue[start:end],'k.')
         plt.plot(range(length),testPredictions[start:end],'r')
         plt.legend(['Actual','Predicted'])
+        os.makedirs(save_to.split('/')[0], exist_ok=True)
         plt.savefig(save_to)
 
     return testScore, testPredictions, testYTrue
@@ -134,23 +135,60 @@ def cross_corr(model, X_test, y_test, scaler_y):
 
 
 if __name__ == "__main__":
-    # df = read_csv('data/data_single_loc.csv')
-    df = load_netcdf('data/ERA5_single_location')
     
-    X_train, y_train, X_test, y_test, scaler_y = data_prep(df, n_hours=6)
+    # parsing config file
+    config = ConfigParser()
+    config.read('properties.cfg')
+    latitude = config.get('dataSection', 'latitude')
+    longitude = config.get('dataSection', 'longitude')
+    trainFrom = int(config.get('dataSection', 'train.from'))
+    trainTo = int(config.get('dataSection', 'train.to'))
+    testFrom = int(config.get('dataSection', 'test.from'))
+    testTo = int(config.get('dataSection', 'test.to'))
+    lookback = int(config.get('modelsSection', 'lookback'))
+    hoursIntoFuture = int(config.get('modelsSection', 'noHoursPredicted'))
+    include_dense = config.getboolean('modelsSection', 'dense')
+    include_lstm = config.getboolean('modelsSection', 'lstm')
+    
+    # loading needed data
+    df = load_netcdf('data')
+    
+    # processing data for models training and evaluating
+    X_train, y_train, X_test, y_test, scaler_y = data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, hoursIntoFuture)
+    
+    if include_dense:
+        # defining models
+        dense = Sequential([
+            Dense(units=24, activation='relu', input_shape=(lookback, X_train.shape[2])),
+            Dropout(0.2),
+            Dense(units=24, activation='relu'),
+            Dropout(0.2),
+            Dense(units=24, activation='relu'),
+            Dropout(0.2),
+            Dense(1),
+            Reshape([1,24]),
+            Dense(1),
+            Reshape([1])
+        ])
 
-    dense = Sequential([
-        Dense(units=24, activation='relu', input_shape=(24,11)),
-        Dropout(0.2),
-        Dense(units=24, activation='relu'),
-        Dropout(0.2),
-        Dense(units=24, activation='relu'),
-        Dropout(0.2),
-        Dense(1),
-        Reshape([1,24]),
-        Dense(1),
-        Reshape([1])
-    ])
+        # training
+        compile_and_fit(dense, X_train, y_train)
 
-    compile_and_fit(dense, X_train, y_train)
-    testScore, testPredictions, testYTrue = evaluate(dense, X_test, y_test, scaler_y, display = True, save_to='workdir/figures/results.png')
+        # evaluation
+        testScore, testPredictions, testYTrue = evaluate(dense, X_test, y_test, scaler_y, save_to='figures/results_dense_[{},{}].png'.format(latitude, longitude))
+
+        # saving models to files
+        dense.save('saved_models/dense_[{},{}].h5'.format(latitude, longitude))
+        
+
+    if include_lstm:
+        lstm = Sequential([
+            LSTM(24, activation='relu', input_shape=(lookback, X_train.shape[2]), return_sequences=True),
+            LSTM(24, activation='relu', return_sequences=True),
+            LSTM(24, activation='relu'),
+            Dense(1)
+        ])
+
+        compile_and_fit(lstm, X_train, y_train)
+        testScore, testPredictions, testYTrue = evaluate(lstm, X_test, y_test, scaler_y, save_to='figures/results_lstm_[{},{}].png'.format(latitude, longitude))
+        dense.save('saved_models/lstm_[{},{}].h5'.format(latitude, longitude))

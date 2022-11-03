@@ -1,5 +1,14 @@
-import time
-import cdsapi
+import sys, time, cdsapi
+from configparser import ConfigParser
+
+config = ConfigParser()
+config.read('properties.cfg')
+latitude = config.get('dataSection', 'latitude')
+longitude = config.get('dataSection', 'longitude')
+trainFrom = int(config.get('dataSection', 'train.from'))
+trainTo = int(config.get('dataSection', 'train.to'))
+testFrom = int(config.get('dataSection', 'test.from'))
+testTo = int(config.get('dataSection', 'test.to'))
 
 def request(year):
     return ({
@@ -43,14 +52,15 @@ def request(year):
             '21:00', '22:00', '23:00',
         ],
         'area': [
-            51, 19, 49,
-            21,
+            latitude, longitude, latitude,
+            longitude,
         ],
     })
 
 c = cdsapi.Client(debug=True, wait_until_complete=False)
 
-requests = [[year, c.retrieve('reanalysis-era5-single-levels',request(year))] for year in [2002,2003]]
+years = list(range(trainFrom, trainTo+1)) + list(range(testFrom, testTo+1))
+requests = [[year, c.retrieve('reanalysis-era5-single-levels',request(year))] for year in years]
 sleep = 60
 
 while True:
@@ -60,7 +70,7 @@ while True:
         reply = r.reply
         r.info("Request ID: %s, state: %s" % (reply['request_id'], reply['state']))
         if reply['state'] == 'completed':
-            r.download('dane_[50,20]_12m_'+str(item[0])+'.nc')
+            r.download('data/data_[{},{}]_'.format(latitude, longitude)+str(item[0])+'.nc')
             item[0] = 0
         elif reply['state'] in ('queued', 'running'):
             r.info("Request ID: %s, sleep: %s", reply['request_id'], sleep)
