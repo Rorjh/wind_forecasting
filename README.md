@@ -2,6 +2,11 @@
 Praca magisterska w ramach projektu LOB:\
 *Krótkoterminowe predykcje prędkości wiatru przy użyciu sztucznych sieci neuronowych*
 
+## Sklonowanie repozytoriu:
+Pobierz kod źródłowy za pomocą komendy:
+```
+git clone git@git.icm.edu.pl:lobster/maciej-romanski.git
+```
 
 ## Środowisko wirtualne
 Stwórz środowisko wirtualne pythona:
@@ -25,7 +30,7 @@ Aktywuj stworzone środowisko:
 ```
 pipenv shell
 ``` -->
-## Uzupełnij plik konfiguracyjny
+## Plik konfiguracyjny
 W pliku *properties.cfg* należy dostosować ustawienia.
 ```
 [dataSection]
