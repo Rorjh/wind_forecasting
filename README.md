@@ -11,9 +11,14 @@ git clone git@git.icm.edu.pl:lobster/maciej-romanski.git
 ## Środowisko wirtualne
 Stwórz środowisko wirtualne pythona:
 ```
-virtualvenv venv
+virtualenv venv
 ```
 Aktywuj środowisko:
+* Linux:
+```
+source venv/bin/activate
+```
+* Windows:
 ```
 source venv/Scripts/activate
 ```

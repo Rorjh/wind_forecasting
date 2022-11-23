@@ -191,4 +191,4 @@ if __name__ == "__main__":
 
         compile_and_fit(lstm, X_train, y_train)
         testScore, testPredictions, testYTrue = evaluate(lstm, X_test, y_test, scaler_y, save_to='figures/results_lstm_[{},{}].png'.format(latitude, longitude))
-        dense.save('saved_models/lstm_[{},{}].h5'.format(latitude, longitude))
+        lstm.save('saved_models/lstm_[{},{}].h5'.format(latitude, longitude))
