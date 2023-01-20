@@ -154,7 +154,7 @@ if __name__ == "__main__":
     df.drop(labels=['u10', 'v10', 'u100', 'v100'], axis=1, inplace = True)
 
     # processing data for models training and evaluating
-    X_train, y_train, X_test, y_test = data_prep(df, trainFrom=2014, trainTo=2020, testFrom=2021, testTo=2021, lookback=24, toFuture=1, y_featurename='wd_100_cat')
+    X_train, y_train, X_test, y_test = data_prep(df, trainFrom=trainFrom, trainTo=trainTo, testFrom=testFrom, testTo=testTo, lookback=lookback, toFuture=hoursIntoFuture, y_featurename='wd_100_cat')
 
     y_train = to_categorical(y_train)
     y_test = to_categorical(y_test)
