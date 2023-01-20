@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import netCDF4
+import netCDF4, os
 
 from netCDF4 import num2date
 from functions import *
@@ -14,7 +14,10 @@ def netCDF2df (filename):
     # Extract variable - każdy parametr ma przypisane time, lat, lon
     t2m = f.variables['t2m']
     # Get dimensions assuming 3D: time, latitude, longitude
-    time_dim, lat_dim, lon_dim = t2m.get_dims()
+    try:
+        time_dim, lat_dim, lon_dim = t2m.get_dims()
+    except:
+        time_dim, dummy, lat_dim, lon_dim = t2m.get_dims()
     time_var = f.variables[time_dim.name]
     times = num2date(time_var[:], time_var.units, only_use_cftime_datetimes=False, only_use_python_datetimes=True)
     latitudes = f.variables[lat_dim.name][:]
@@ -76,10 +79,13 @@ def load_netcdf(path):
     testTo = int(config.get('dataSection', 'test.to'))
     
     years = list(range(trainFrom, trainTo+1)) + list(range(testFrom, testTo+1))
-    files = [path+'/data_[{},{}]_'.format(latitude, longitude)+str(year)+'.nc' for year in years]
+    # files = [path+'/data_[{},{}]_'.format(latitude, longitude)+str(year)+'.nc' for year in years]
     df = pd.DataFrame()
-    for file in files:
-        df = df.append(netCDF2df(file),ignore_index=True)
+    # for file in files:
+    #     df = df.append(netCDF2df(file),ignore_index=True)
+    for filename in os.listdir(path):
+        if filename.endswith('.nc'):
+            df = df.append(netCDF2df(path+'/'+filename),ignore_index=True)
     
     df['Date Time'] = pd.to_datetime(df.pop('Date Time'), infer_datetime_format=True)
     df['tp'] = df['tp'].fillna(0)

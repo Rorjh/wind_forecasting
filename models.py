@@ -37,7 +37,7 @@ def datetimeToSignal(df):
     
     return df
 
-def to_supervised(data, n_input, n_out=1):
+def to_supervised(data, n_input, n_out, y_index):
     X, y = list(), list()
     in_start = 0
     # step over the entire history one time step at a time
@@ -48,13 +48,12 @@ def to_supervised(data, n_input, n_out=1):
         # ensure we have enough data for this instance
         if out_end < len(data):
             X.append(data[in_start:in_end, :])
-            y.append(data[out_end-1, 5]) # 5 indicates 'windspeed10' parameter
+            y.append(data[out_end-1, y_index])
         # move along one time step
         in_start += 1
     return array(X), array(y).reshape((len(y),1))
 
-def data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, toFuture):
-
+def data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, toFuture, y_featurename):
     train = df[df['Date Time']>='{}-01-01'.format(trainFrom)]
     train = train[train['Date Time']<'{}-01-01'.format(trainTo+1)]
     test = df[df['Date Time']>='{}-01-01'.format(testFrom)]
@@ -62,6 +61,8 @@ def data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, toFuture):
 
     train = datetimeToSignal(train)
     test = datetimeToSignal(test)
+    
+    y_index = train.columns.get_loc(y_featurename)
 
     values_train = train.values
     values_test = test.values
@@ -70,13 +71,13 @@ def data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, toFuture):
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaler.fit(values_train)
     scaler_y = MinMaxScaler(feature_range=(0, 1))
-    scaler_y.fit(values_train[:,5].reshape(len(values_train),1))
+    scaler_y.fit(values_train[:,y_index].reshape(len(values_train),1))
 
     values_train = scaler.transform(values_train)
     values_test = scaler.transform(values_test)
 
-    X_train, y_train = to_supervised(values_train, n_input=lookback, n_out=toFuture)
-    X_test, y_test = to_supervised(values_test, n_input=lookback, n_out=toFuture)
+    X_train, y_train = to_supervised(values_train, n_input=lookback, n_out=toFuture, y_index=y_index)
+    X_test, y_test = to_supervised(values_test, n_input=lookback, n_out=toFuture, y_index=y_index)
 
     return X_train, y_train, X_test, y_test, scaler_y
 
@@ -149,12 +150,14 @@ if __name__ == "__main__":
     hoursIntoFuture = int(config.get('modelsSection', 'noHoursPredicted'))
     include_dense = config.getboolean('modelsSection', 'dense')
     include_lstm = config.getboolean('modelsSection', 'lstm')
+    path = config.get('dataSection', 'path')
+    y_featurename = config.get('dataSection', 'y_featurename')
     
     # loading needed data
-    df = load_netcdf('data')
+    df = load_netcdf(path)
     
     # processing data for models training and evaluating
-    X_train, y_train, X_test, y_test, scaler_y = data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, hoursIntoFuture)
+    X_train, y_train, X_test, y_test, scaler_y = data_prep(df, trainFrom, trainTo, testFrom, testTo, lookback, hoursIntoFuture, y_featurename)
     
     if include_dense:
         # defining models
