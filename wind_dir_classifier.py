@@ -141,10 +141,11 @@ if __name__ == "__main__":
 
     df['wd_10'] = np.arctan2(df['v10'], df['u10'])
     df['wd_100'] = np.arctan2(df['v100'], df['u100'])
-    df['wd_10'] = df['wd_10'].where(df['wd_10']>0, df['wd_10']+2*np.pi)
-    df['wd_100'] = df['wd_100'].where(df['wd_100']>0, df['wd_100']+2*np.pi)
+    # df['wd_10'] = df['wd_10'].where(df['wd_10']>0, df['wd_10']+2*np.pi)
+    # df['wd_100'] = df['wd_100'].where(df['wd_100']>0, df['wd_100']+2*np.pi)
 
-    bins = np.linspace(0, 2*np.pi,9)
+    # bins = np.linspace(0, 2*np.pi,9)
+    bins = np.linspace(-np.pi, np.pi,9)
     labels = range(8)
     df['wd_100_cat'] = pd.cut(df['wd_100'], bins=bins, include_lowest=True, labels=labels)
 
