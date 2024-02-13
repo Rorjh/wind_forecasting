@@ -91,7 +91,7 @@ def compile_and_fit(model, X_train, y_train):
 
     model.fit(X_train, y_train, epochs=20, batch_size=32, callbacks=[early_stopping])
 
-def evaluate(model, X_test, y_test, scaler_y, display = True, save_to = ''):
+def evaluate(model, X_test, y_test, scaler_y, display = True, save_to = '', y_label=''):
     # make predictions
     testPredictions = model.predict(X_test)
 
@@ -109,7 +109,7 @@ def evaluate(model, X_test, y_test, scaler_y, display = True, save_to = ''):
         end = start+length
         plt.figure(figsize=[10,5])
         plt.xlabel('TimePoint in hours')
-        plt.ylabel('$Windspeed_{10}[m/s]$')
+        plt.ylabel(y_label)
         plt.grid()
         plt.plot(range(length), testYTrue[start:end],'k.')
         plt.plot(range(length),testPredictions[start:end],'r')
